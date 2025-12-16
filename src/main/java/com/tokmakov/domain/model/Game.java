@@ -31,4 +31,12 @@ public final class Game {
         };
         return true;
     }
+
+    public CellValue[][] getGameField() {
+        CellValue[][] copy = new CellValue[gameField.length][gameField[0].length];
+        for (int i = 0; i < gameField.length; i++) {
+            System.arraycopy(gameField[i], 0, copy[i], 0, gameField[i].length);
+        }
+        return copy;
+    }
 }

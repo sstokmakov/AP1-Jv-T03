@@ -22,7 +22,10 @@ public class GlobalExceptionHandler {
                 .body(error);
     }
 
-    @ExceptionHandler(value = {InvalidTurnException.class, CellAlreadyOccupiedException.class})
+    @ExceptionHandler(value = {
+            InvalidTurnException.class,
+            CellAlreadyOccupiedException.class,
+            GameNotInProgressException.class})
     public ResponseEntity<ErrorResponse> handleConflictException(RuntimeException e) {
         ErrorResponse error = new ErrorResponse(e.getMessage(),
                 HttpStatus.CONFLICT.value(),
