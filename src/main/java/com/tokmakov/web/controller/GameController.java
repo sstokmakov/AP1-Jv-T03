@@ -10,8 +10,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.UUID;
-
 @Validated
 @RestController
 @RequestMapping("/game")
@@ -21,8 +19,9 @@ public class GameController {
     private final GameDtoMapper mapper;
 
     @PostMapping("/createGame")
-    public UUID createGame() {
-        return service.createGame();
+    public GameDto createGame() {
+        Game game = service.createGame();
+        return mapper.toDto(game);
     }
 
     @GetMapping("/{uuid}")

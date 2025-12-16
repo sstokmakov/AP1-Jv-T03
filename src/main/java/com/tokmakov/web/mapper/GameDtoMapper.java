@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class GameDtoMapper {
     public GameDto toDto(Game game) {
-        return new GameDto(copyBoard(game.getGameField()), game.getGameStatus());
+        return new GameDto(game.getUuid(), copyBoard(game.getGameField()), game.getGameStatus());
     }
 
     private CellValue[][] copyBoard(CellValue[][] board) {

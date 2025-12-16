@@ -8,11 +8,11 @@ import org.springframework.stereotype.Component;
 @Component
 public class GameDataMapper {
     public GameData toData(Game game) {
-        return new GameData(game.getUuid(), copyBoard(game.getGameField()), game.getGameStatus());
+        return new GameData(game.getUuid(), copyBoard(game.getGameField()), game.getGameStatus(), game.getTurnOwner());
     }
 
     public Game toDomain(GameData data) {
-        Game game = new Game(data.uuid(), copyBoard(data.gameField()));
+        Game game = new Game(data.uuid(), copyBoard(data.gameField()), data.turnOwner());
         game.setGameStatus(data.gameStatus());
         return game;
     }

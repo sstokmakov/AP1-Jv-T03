@@ -11,11 +11,14 @@ public final class Game {
     private final CellValue[][] gameField;
     @Setter
     private GameStatus gameStatus;
+    @Setter
+    private TurnOwner turnOwner;
 
-    public Game(UUID uuid, CellValue[][] gameField) {
+    public Game(UUID uuid, CellValue[][] gameField, TurnOwner turnOwner) {
         this.uuid = uuid;
         this.gameField = gameField;
         gameStatus = GameStatus.IN_PROGRESS;
+        this.turnOwner = turnOwner;
     }
 
     public boolean updateField(int x, int y, TurnOwner turn) {

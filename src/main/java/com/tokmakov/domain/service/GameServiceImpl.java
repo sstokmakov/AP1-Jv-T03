@@ -25,14 +25,12 @@ public class GameServiceImpl implements GameService {
     private final GameRepository repository;
     private final ComputerMoveStrategy computerLogicService;
 
-    private TurnOwner turnOwner = TurnOwner.PLAYER_TURN;
-
     @Override
-    public UUID createGame() {
+    public Game createGame() {
         CellValue[][] field = createEmptyField();
-        Game game = new Game(UUID.randomUUID(), field);
+        Game game = new Game(UUID.randomUUID(), field, TurnOwner.PLAYER_TURN);
         repository.saveGame(game);
-        return game.getUuid();
+        return game;
     }
 
     private CellValue[][] createEmptyField() {
@@ -50,16 +48,17 @@ public class GameServiceImpl implements GameService {
 
     @Override
     public Game makeMove(String uuid, Integer x, Integer y) {
-        validateTurnOrder(TurnOwner.PLAYER_TURN);
-
         Game game = getGameByUuid(uuid);
 
+        validateTurnOrder(game, TurnOwner.PLAYER_TURN);
         updateFieldWhenPlayerMove(game, x, y);
+        game.setTurnOwner(TurnOwner.COMPUTER_TURN);
 
-        turnOwner = TurnOwner.COMPUTER_TURN;
-        if (isGameOver(uuid))
+        if (isGameOver(game)) {
             game.setGameStatus(GameStatus.X_WIN);
-
+        } else if (isGameDraw(game)) {
+            game.setGameStatus(GameStatus.DRAW);
+        }
         repository.saveGame(game);
         return game;
     }
@@ -74,27 +73,36 @@ public class GameServiceImpl implements GameService {
 
     @Override
     public Game makeComputerMove(String uuid) {
-        validateTurnOrder(TurnOwner.COMPUTER_TURN);
         Game game = getGameByUuid(uuid);
-        turnOwner = TurnOwner.PLAYER_TURN;
+        validateTurnOrder(game, TurnOwner.COMPUTER_TURN);
+        game.setTurnOwner(TurnOwner.PLAYER_TURN);
         game = computerLogicService.makeMove(game);
+        if (isGameOver(game)) {
+            game.setGameStatus(GameStatus.O_WIN);
+        } else if (isGameDraw(game)) {
+            game.setGameStatus(GameStatus.DRAW);
+        }
         repository.saveGame(game);
         return game;
     }
 
-    private void validateTurnOrder(TurnOwner expectedTurn) {
-        if (expectedTurn != turnOwner)
-            throw new InvalidTurnException(turnOwner.name());
+    private void validateTurnOrder(Game game, TurnOwner expectedTurn) {
+        if (expectedTurn != game.getTurnOwner())
+            throw new InvalidTurnException(game.getTurnOwner().name());
     }
 
-    @Override
-    public boolean isGameOver(String uuid) {
-        Game game = getGameByUuid(uuid);
-        return checkGameIsOver(game);
-    }
-
-    private boolean checkGameIsOver(Game game) {
+    private boolean isGameOver(Game game) {
         return checkVertical(game) || checkHorizontal(game) || checkDiagonal(game);
+    }
+
+    private boolean isGameDraw(Game game) {
+        CellValue[][] field = game.getGameField();
+        for (CellValue[] cellValues : field) {
+            for (CellValue cellValue : cellValues) {
+                if (cellValue == CellValue.EMPTY) return false;
+            }
+        }
+        return true;
     }
 
     private boolean checkVertical(Game game) {
