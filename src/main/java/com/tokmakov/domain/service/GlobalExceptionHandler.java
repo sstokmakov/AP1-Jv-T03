@@ -23,7 +23,6 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(value = {
-            InvalidTurnException.class,
             CellAlreadyOccupiedException.class,
             GameNotInProgressException.class,
             IllegalArgumentException.class})

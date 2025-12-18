@@ -7,9 +7,7 @@ public interface GameService {
 
     Game gameByUuid(String uuid);
 
-    Game makeMove(String uuid, Integer x, Integer y);
-
-    Game makeComputerMove(String uuid);
+    Game processTurn(String uuid, int[][] newField);
 
     void validateField(Game game, int[][] newField);
 

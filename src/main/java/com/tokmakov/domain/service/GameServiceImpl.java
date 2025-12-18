@@ -7,25 +7,16 @@ import com.tokmakov.domain.model.GameStatus;
 import com.tokmakov.domain.model.TurnOwner;
 import com.tokmakov.domain.service.util.GameFieldValidator;
 import com.tokmakov.domain.service.util.GameUtils;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Service;
+import lombok.RequiredArgsConstructor;
 
 import java.util.Optional;
 import java.util.UUID;
 
-@Service
+@RequiredArgsConstructor
 public class GameServiceImpl implements GameService {
     private final GameRepository repository;
     private final ComputerMoveStrategy computerLogicService;
     private final GameFieldValidator fieldValidator;
-
-    public GameServiceImpl(GameRepository repository,
-                           @Qualifier("minimaxMoveStrategy") ComputerMoveStrategy computerLogicService,
-                           GameFieldValidator fieldValidator) {
-        this.repository = repository;
-        this.computerLogicService = computerLogicService;
-        this.fieldValidator = fieldValidator;
-    }
 
     @Override
     public Game createGame() {
@@ -46,50 +37,38 @@ public class GameServiceImpl implements GameService {
     }
 
     @Override
-    public Game makeMove(String uuid, Integer x, Integer y) {
+    public Game processTurn(String uuid, int[][] newField) {
         Game game = getGameByUuid(uuid);
         if (isGameFinished(game)) throw new GameNotInProgressException(game.getGameStatus());
-        validateTurnOrder(game, TurnOwner.PLAYER_TURN);
-        applyMove(game, TurnOwner.PLAYER_TURN, x, y);
-        game.setTurnOwner(TurnOwner.COMPUTER_TURN);
-        game.setGameStatus(GameUtils.calculateGameStatus(game.getGameField()));
-        repository.saveGame(game);
-        return game;
-    }
-
-    @Override
-    public Game makeComputerMove(String uuid) {
-        Game game = getGameByUuid(uuid);
-        if (isGameFinished(game)) throw new GameNotInProgressException(game.getGameStatus());
-        validateTurnOrder(game, TurnOwner.COMPUTER_TURN);
-        int[] move = computerLogicService.findMove(game.getGameField());
-        applyMove(game, TurnOwner.COMPUTER_TURN, move[0], move[1]);
-        game.setTurnOwner(TurnOwner.PLAYER_TURN);
-        game.setGameStatus(GameUtils.calculateGameStatus(game.getGameField()));
-        repository.saveGame(game);
+        makePlayerMove(game, newField);
+        if (isGameFinished(game)) return game;
+        makeComputerMove(game);
         return game;
     }
 
     @Override
     public void validateField(Game game, int[][] newField) {
-        fieldValidator.validate(game, newField);
+        fieldValidator.validateField(game, newField);
     }
 
-    private void applyMove(Game game, TurnOwner turnOwner, int x, int y) {
-        validateCoordinates(x, y);
-        boolean updated = game.updateField(x, y, turnOwner);
-        if (!updated)
-            throw new CellAlreadyOccupiedException(x, y);
+    private void makePlayerMove(Game game, int[][] newField) {
+        fieldValidator.validateField(game, newField);
+        game.setGameField(newField);
+        game.setGameStatus(GameUtils.calculateGameStatus(game.getGameField()));
+        repository.saveGame(game);
     }
 
-    private void validateCoordinates(int x, int y) {
-        if (x < 0 || y < 0 || x >= GameUtils.FIELD_SIZE || y >= GameUtils.FIELD_SIZE)
-            throw new CoordinatesOutOfBoundsException(x, y, GameUtils.FIELD_SIZE);
+    public void makeComputerMove(Game game) {
+        if (isGameFinished(game)) throw new GameNotInProgressException(game.getGameStatus());
+        int[] move = computerLogicService.findMove(game.getGameField());
+        applyMove(game, move[0], move[1], GameUtils.COMPUTER_CELL);
+        game.setGameStatus(GameUtils.calculateGameStatus(game.getGameField()));
+        repository.saveGame(game);
     }
 
-    private void validateTurnOrder(Game game, TurnOwner expectedTurn) {
-        if (expectedTurn != game.getTurnOwner())
-            throw new InvalidTurnException(game.getTurnOwner().name());
+    private void applyMove(Game game, int x, int y, int value) {
+        fieldValidator.validateTurn(game, x, y);
+        game.updateField(x, y, value);
     }
 
     private Game getGameByUuid(String uuid) {
