@@ -10,4 +10,8 @@ public interface GameService {
     Game makeMove(String uuid, Integer x, Integer y);
 
     Game makeComputerMove(String uuid);
+
+    void validateField(Game game, int[][] newField);
+
+    boolean isGameFinished(Game game);
 }

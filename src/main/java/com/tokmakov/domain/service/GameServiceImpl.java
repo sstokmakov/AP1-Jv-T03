@@ -2,15 +2,14 @@ package com.tokmakov.domain.service;
 
 import com.tokmakov.datasource.repository.GameRepository;
 import com.tokmakov.domain.exception.*;
-import com.tokmakov.domain.model.CellValue;
 import com.tokmakov.domain.model.Game;
 import com.tokmakov.domain.model.GameStatus;
 import com.tokmakov.domain.model.TurnOwner;
+import com.tokmakov.domain.service.util.GameFieldValidator;
 import com.tokmakov.domain.service.util.GameUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
-import java.util.Arrays;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -18,27 +17,27 @@ import java.util.UUID;
 public class GameServiceImpl implements GameService {
     private final GameRepository repository;
     private final ComputerMoveStrategy computerLogicService;
+    private final GameFieldValidator fieldValidator;
 
     public GameServiceImpl(GameRepository repository,
-                           @Qualifier("minimaxMoveStrategy") ComputerMoveStrategy computerLogicService) {
+                           @Qualifier("minimaxMoveStrategy") ComputerMoveStrategy computerLogicService,
+                           GameFieldValidator fieldValidator) {
         this.repository = repository;
         this.computerLogicService = computerLogicService;
+        this.fieldValidator = fieldValidator;
     }
 
     @Override
     public Game createGame() {
-        CellValue[][] field = createEmptyField();
+        int[][] field = GameUtils.createEmptyField();
         Game game = new Game(UUID.randomUUID(), field, TurnOwner.PLAYER_TURN);
         repository.saveGame(game);
         return game;
     }
 
-    private CellValue[][] createEmptyField() {
-        CellValue[][] field = new CellValue[GameUtils.FIELD_SIZE][GameUtils.FIELD_SIZE];
-        for (int i = 0; i < GameUtils.FIELD_SIZE; i++) {
-            Arrays.fill(field[i], CellValue.EMPTY);
-        }
-        return field;
+    @Override
+    public boolean isGameFinished(Game game) {
+        return game.getGameStatus() != GameStatus.IN_PROGRESS;
     }
 
     @Override
@@ -49,33 +48,43 @@ public class GameServiceImpl implements GameService {
     @Override
     public Game makeMove(String uuid, Integer x, Integer y) {
         Game game = getGameByUuid(uuid);
-        if (game.getGameStatus() != GameStatus.IN_PROGRESS)
-            throw new GameNotInProgressException(game.getGameStatus());
+        if (isGameFinished(game)) throw new GameNotInProgressException(game.getGameStatus());
         validateTurnOrder(game, TurnOwner.PLAYER_TURN);
-        updateFieldWhenPlayerMove(game, x, y);
+        applyMove(game, TurnOwner.PLAYER_TURN, x, y);
         game.setTurnOwner(TurnOwner.COMPUTER_TURN);
         game.setGameStatus(GameUtils.calculateGameStatus(game.getGameField()));
         repository.saveGame(game);
         return game;
     }
 
-    private void updateFieldWhenPlayerMove(Game game, Integer x, Integer y) {
-        if (x < 0 || y < 0 || x >= GameUtils.FIELD_SIZE || y >= GameUtils.FIELD_SIZE)
-            throw new CoordinatesOutOfBoundsException(x, y, GameUtils.FIELD_SIZE);
-        boolean isUpdated = game.updateField(x, y, TurnOwner.PLAYER_TURN);
-        if (!isUpdated)
-            throw new CellAlreadyOccupiedException(x, y);
-    }
-
     @Override
     public Game makeComputerMove(String uuid) {
         Game game = getGameByUuid(uuid);
+        if (isGameFinished(game)) throw new GameNotInProgressException(game.getGameStatus());
         validateTurnOrder(game, TurnOwner.COMPUTER_TURN);
+        int[] move = computerLogicService.findMove(game.getGameField());
+        applyMove(game, TurnOwner.COMPUTER_TURN, move[0], move[1]);
         game.setTurnOwner(TurnOwner.PLAYER_TURN);
-        game = computerLogicService.makeMove(game);
         game.setGameStatus(GameUtils.calculateGameStatus(game.getGameField()));
         repository.saveGame(game);
         return game;
+    }
+
+    @Override
+    public void validateField(Game game, int[][] newField) {
+        fieldValidator.validate(game, newField);
+    }
+
+    private void applyMove(Game game, TurnOwner turnOwner, int x, int y) {
+        validateCoordinates(x, y);
+        boolean updated = game.updateField(x, y, turnOwner);
+        if (!updated)
+            throw new CellAlreadyOccupiedException(x, y);
+    }
+
+    private void validateCoordinates(int x, int y) {
+        if (x < 0 || y < 0 || x >= GameUtils.FIELD_SIZE || y >= GameUtils.FIELD_SIZE)
+            throw new CoordinatesOutOfBoundsException(x, y, GameUtils.FIELD_SIZE);
     }
 
     private void validateTurnOrder(Game game, TurnOwner expectedTurn) {

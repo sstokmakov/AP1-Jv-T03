@@ -1,9 +1,6 @@
 package com.tokmakov.domain.service;
 
-import com.tokmakov.domain.model.CellValue;
-import com.tokmakov.domain.model.Game;
 import com.tokmakov.domain.model.GameStatus;
-import com.tokmakov.domain.model.TurnOwner;
 import com.tokmakov.domain.service.util.GameUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -15,38 +12,31 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MinimaxMoveStrategy implements ComputerMoveStrategy {
     @Override
-    public Game makeMove(Game game) {
-        CellValue[][] board = game.getGameField();
-        int[] move = bestMove(board);
-        if (move[0] == -1) {
-            return game;
-        }
-
-        game.updateField(move[1], move[0], TurnOwner.COMPUTER_TURN);
-        return game;
+    public int[] findMove(int[][] board) {
+        return bestMove(board);
     }
 
-    private static int[] bestMove(CellValue[][] board) {
+    private static int[] bestMove(int[][] board) {
         int bestScore = Integer.MIN_VALUE;
-        int[] best = {-1, -1};
+        int[] best = {0, 0};
 
         for (int[] cell : emptyCells(board)) {
-            int r = cell[0], c = cell[1];
-            board[r][c] = CellValue.O_MARK;
+            int x = cell[0], y = cell[1];
+            board[y][x] = GameUtils.COMPUTER_CELL;
 
             int score = minimax(board, false);
-            board[r][c] = CellValue.EMPTY;
+            board[y][x] = GameUtils.EMPTY_CELL;
 
             if (score > bestScore) {
                 bestScore = score;
-                best[0] = r;
-                best[1] = c;
+                best[0] = x;
+                best[1] = y;
             }
         }
         return best;
     }
 
-    private static int minimax(CellValue[][] board, boolean isMaximizing) {
+    private static int minimax(int[][] board, boolean isMaximizing) {
         GameStatus status = GameUtils.calculateGameStatus(board);
         if (status != GameStatus.IN_PROGRESS) {
             if (status == GameStatus.O_WIN) return 1;
@@ -57,30 +47,30 @@ public class MinimaxMoveStrategy implements ComputerMoveStrategy {
         if (isMaximizing) {
             int best = Integer.MIN_VALUE;
             for (int[] cell : emptyCells(board)) {
-                int r = cell[0], c = cell[1];
-                board[r][c] = CellValue.O_MARK;
+                int x = cell[0], y = cell[1];
+                board[y][x] = GameUtils.COMPUTER_CELL;
                 best = Math.max(best, minimax(board, false));
-                board[r][c] = CellValue.EMPTY;
+                board[y][x] = GameUtils.EMPTY_CELL;
             }
             return best;
         } else {
             int best = Integer.MAX_VALUE;
             for (int[] cell : emptyCells(board)) {
-                int r = cell[0], c = cell[1];
-                board[r][c] = CellValue.X_MARK;
+                int x = cell[0], y = cell[1];
+                board[y][x] = GameUtils.PLAYER_CELL;
                 best = Math.min(best, minimax(board, true));
-                board[r][c] = CellValue.EMPTY;
+                board[y][x] = GameUtils.EMPTY_CELL;
             }
             return best;
         }
     }
 
-    private static List<int[]> emptyCells(CellValue[][] board) {
+    private static List<int[]> emptyCells(int[][] board) {
         List<int[]> cells = new ArrayList<>();
-        for (int r = 0; r < GameUtils.FIELD_SIZE; r++) {
-            for (int c = 0; c < GameUtils.FIELD_SIZE; c++) {
-                if (board[r][c] == CellValue.EMPTY)
-                    cells.add(new int[]{r, c});
+        for (int y = 0; y < GameUtils.FIELD_SIZE; y++) {
+            for (int x = 0; x < GameUtils.FIELD_SIZE; x++) {
+                if (board[y][x] == GameUtils.EMPTY_CELL)
+                    cells.add(new int[]{x, y});
             }
         }
         return cells;

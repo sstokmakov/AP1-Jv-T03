@@ -25,7 +25,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(value = {
             InvalidTurnException.class,
             CellAlreadyOccupiedException.class,
-            GameNotInProgressException.class})
+            GameNotInProgressException.class,
+            IllegalArgumentException.class})
     public ResponseEntity<ErrorResponse> handleConflictException(RuntimeException e) {
         ErrorResponse error = new ErrorResponse(e.getMessage(),
                 HttpStatus.CONFLICT.value(),
