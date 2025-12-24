@@ -1,6 +1,6 @@
 package com.tokmakov.domain.service;
 
-import com.tokmakov.datasource.repository.GameRepository;
+import com.tokmakov.datasource.GameRepository;
 import com.tokmakov.domain.exception.*;
 import com.tokmakov.domain.model.Game;
 import com.tokmakov.domain.model.GameStatus;
@@ -8,10 +8,12 @@ import com.tokmakov.domain.model.TurnOwner;
 import com.tokmakov.domain.service.util.GameFieldValidator;
 import com.tokmakov.domain.service.util.GameUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
 import java.util.Optional;
 import java.util.UUID;
 
+@Service
 @RequiredArgsConstructor
 public class GameServiceImpl implements GameService {
     private final GameRepository repository;
@@ -22,7 +24,7 @@ public class GameServiceImpl implements GameService {
     public Game createGame() {
         int[][] field = GameUtils.createEmptyField();
         Game game = new Game(UUID.randomUUID(), field, TurnOwner.PLAYER_TURN);
-        repository.saveGame(game);
+        repository.save(game);
         return game;
     }
 
@@ -55,7 +57,7 @@ public class GameServiceImpl implements GameService {
         fieldValidator.validateField(game, newField);
         game.setGameField(newField);
         game.setGameStatus(GameUtils.calculateGameStatus(game.getGameField()));
-        repository.saveGame(game);
+        repository.save(game);
     }
 
     public void makeComputerMove(Game game) {
@@ -63,7 +65,7 @@ public class GameServiceImpl implements GameService {
         int[] move = computerLogicService.findMove(game.getGameField());
         applyMove(game, move[0], move[1], GameUtils.COMPUTER_CELL);
         game.setGameStatus(GameUtils.calculateGameStatus(game.getGameField()));
-        repository.saveGame(game);
+        repository.save(game);
     }
 
     private void applyMove(Game game, int x, int y, int value) {
@@ -73,7 +75,7 @@ public class GameServiceImpl implements GameService {
 
     private Game getGameByUuid(String uuid) {
         UUID parsedUuid = parseUuid(uuid);
-        Optional<Game> game = repository.findByUuid(parsedUuid);
+        Optional<Game> game = repository.findById(parsedUuid);
         return game.orElseThrow(() -> new GameNotFoundException(uuid));
     }
 
